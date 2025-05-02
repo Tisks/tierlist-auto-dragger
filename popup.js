@@ -241,6 +241,88 @@ function setupImageHandlers() {
 // =============================================
 // POPUP FUNCTIONALITY
 // =============================================
+async function handleSetup(setupButton, setupComplete, categorySelect, categoryGroup) {
+  // Get the active tab
+  const [tab] = await chrome.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
+
+  chrome.runtime.sendMessage({
+    type: "LOG",
+    message: "Setup button clicked",
+    data: { tab },
+  });
+
+  // Execute the setup operation in the content script
+  const result = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    function: setupTierRows,
+  });
+
+  if (result[0].result) {
+    // Hide setup button and show setup complete text
+    setupButton.style.display = "none";
+    setupComplete.style.display = "inline";
+
+    // Clear existing options except the default one
+    while (categorySelect.options.length > 1) {
+      categorySelect.remove(1);
+    }
+
+    // Add the collected IDs as options
+    result[0].result.forEach((id) => {
+      const option = document.createElement("option");
+      option.value = id;
+      option.textContent = id;
+      categorySelect.appendChild(option);
+    });
+
+    // Show the category select
+    categoryGroup.style.display = "flex";
+
+    // Notify background script of setup completion
+    chrome.runtime.sendMessage({
+      type: "SETUP_COMPLETE",
+      tierRows: result[0].result,
+    });
+  }
+}
+
+async function handleDrag(itemInput, categorySelect) {
+  const itemId = itemInput.value.trim();
+  const categoryId = categorySelect.value;
+
+  if (!itemId || !categoryId) {
+    alert("Please fill in both fields");
+    return;
+  }
+
+  // Get the active tab
+  const [tab] = await chrome.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
+
+  chrome.runtime.sendMessage({
+    type: "LOG",
+    message: "Drag operation initiated",
+    data: { itemId, categoryId, tab },
+  });
+
+  // Execute the drag operation in the content script
+  chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    function: dragItem,
+    args: [itemId, categoryId],
+  });
+
+  // Clear the item input after successful drag
+  itemInput.value = "";
+  // Reset the select to the default option
+  categorySelect.value = "";
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const itemInput = document.getElementById("item");
   const categorySelect = document.getElementById("category");
@@ -264,89 +346,11 @@ document.addEventListener("DOMContentLoaded", () => {
     },
   });
 
+  // Set up event listeners
   closeButton.addEventListener("click", () => {
     window.close();
   });
 
-  setupButton.addEventListener("click", async () => {
-    // Get the active tab
-    const [tab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
-
-    chrome.runtime.sendMessage({
-      type: "LOG",
-      message: "Setup button clicked",
-      data: { tab },
-    });
-
-    // Execute the setup operation in the content script
-    const result = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      function: setupTierRows,
-    });
-
-    if (result[0].result) {
-      // Hide setup button and show setup complete text
-      setupButton.style.display = "none";
-      setupComplete.style.display = "inline";
-
-      // Clear existing options except the default one
-      while (categorySelect.options.length > 1) {
-        categorySelect.remove(1);
-      }
-
-      // Add the collected IDs as options
-      result[0].result.forEach((id) => {
-        const option = document.createElement("option");
-        option.value = id;
-        option.textContent = id;
-        categorySelect.appendChild(option);
-      });
-
-      // Show the category select
-      categoryGroup.style.display = "flex";
-
-      // Notify background script of setup completion
-      chrome.runtime.sendMessage({
-        type: "SETUP_COMPLETE",
-        tierRows: result[0].result,
-      });
-    }
-  });
-
-  dragButton.addEventListener("click", async () => {
-    const itemId = itemInput.value.trim();
-    const categoryId = categorySelect.value;
-
-    if (!itemId || !categoryId) {
-      alert("Please fill in both fields");
-      return;
-    }
-
-    // Get the active tab
-    const [tab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
-
-    chrome.runtime.sendMessage({
-      type: "LOG",
-      message: "Drag operation initiated",
-      data: { itemId, categoryId, tab },
-    });
-
-    // Execute the drag operation in the content script
-    chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      function: dragItem,
-      args: [itemId, categoryId],
-    });
-
-    // Clear the item input after successful drag
-    itemInput.value = "";
-    // Reset the select to the default option
-    categorySelect.value = "";
-  });
+  setupButton.addEventListener("click", () => handleSetup(setupButton, setupComplete, categorySelect, categoryGroup));
+  dragButton.addEventListener("click", () => handleDrag(itemInput, categorySelect));
 });
