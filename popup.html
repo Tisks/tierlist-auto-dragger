@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Auto Dragger</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="title-container">
+      <h1>Auto Dragger</h1>
+      <button id="setup" class="button">Set up</button>
+      <span id="setup-complete" class="setup-complete">Set up</span>
+    </div>
+    <div class="input-group">
+      <label for="item">Item</label>
+      <input type="text" id="item" placeholder="Enter item ID">
+    </div>
+    <div class="input-group" id="category-group" style="display: none;">
+      <label for="category">Category</label>
+      <select id="category">
+        <option value="">Select a category</option>
+      </select>
+    </div>
+    <div class="button-group">
+      <button id="close" class="button">Close</button>
+      <button id="drag" class="button primary">Drag</button>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html> 
