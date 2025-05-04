@@ -65,6 +65,72 @@ function setupTierRows() {
   return false;
 }
 
+function setupImageIds() {
+  chrome.runtime.sendMessage({
+    type: "LOG",
+    message: "IM INSIDE",
+    level: "error",
+  });
+  const idCarousel = document.getElementById("create-image-carousel");
+
+  chrome.runtime.sendMessage({
+    type: "LOG",
+    message: "I FOUND IT",
+    data: { idCarousel },
+  });
+
+  if (!idCarousel) {
+    chrome.runtime.sendMessage({
+      type: "LOG",
+      message: "Image carousel not found",
+      level: "error",
+    });
+    return false;
+  }
+
+  let imageIds = idCarousel.getElementsByTagName("div");
+  imageIds = Array.from(imageIds).filter((div) => !!div.id);
+  if (imageIds.length === 0) {
+    chrome.runtime.sendMessage({
+      type: "LOG",
+      message: "No image ids found",
+      level: "error",
+    });
+    return false;
+  }
+  let idSpan;
+  for (const id of imageIds) {
+    chrome.runtime.sendMessage({
+      type: "LOG",
+      message: "I FOUND IT",
+      data: { id },
+    });
+    idSpan = document.createElement("span");
+    idSpan.textContent = id.id;
+    idSpan.style.cssText = `
+      position: relative;
+      z-index: 9999;
+      top: 0;
+      right: 0;
+      width: 100%;
+      height: 100%;
+    `;
+    id.appendChild(idSpan);
+
+    chrome.runtime.sendMessage({
+      type: "LOG",
+      message: "I FOUND IT",
+      data: { idSpan },
+    });
+  }
+
+  chrome.runtime.sendMessage({
+    type: "LOG",
+    message: "Image ids added successfully",
+    data: { collectedIds },
+  });
+}
+
 function dragItem(itemId, categoryId) {
   const item = document.getElementById(itemId);
   const category = document.getElementById(categoryId);
@@ -241,7 +307,12 @@ function setupImageHandlers() {
 // =============================================
 // POPUP FUNCTIONALITY
 // =============================================
-async function handleSetup(setupButton, setupComplete, categorySelect, categoryGroup) {
+async function handleSetup(
+  setupButton,
+  setupComplete,
+  categorySelect,
+  categoryGroup
+) {
   // Get the active tab
   const [tab] = await chrome.tabs.query({
     active: true,
@@ -258,6 +329,17 @@ async function handleSetup(setupButton, setupComplete, categorySelect, categoryG
   const result = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
     function: setupTierRows,
+  });
+
+  chrome.runtime.sendMessage({
+    type: "LOG",
+    message: "Im about to set up image ids, wait for me",
+    data: { tab },
+  });
+
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    function: setupImageIds,
   });
 
   if (result[0].result) {
@@ -351,6 +433,10 @@ document.addEventListener("DOMContentLoaded", () => {
     window.close();
   });
 
-  setupButton.addEventListener("click", () => handleSetup(setupButton, setupComplete, categorySelect, categoryGroup));
-  dragButton.addEventListener("click", () => handleDrag(itemInput, categorySelect));
+  setupButton.addEventListener("click", () =>
+    handleSetup(setupButton, setupComplete, categorySelect, categoryGroup)
+  );
+  dragButton.addEventListener("click", () =>
+    handleDrag(itemInput, categorySelect)
+  );
 });
